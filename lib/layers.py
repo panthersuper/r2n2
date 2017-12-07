@@ -103,7 +103,7 @@ class PrintShape(object):
         printing_op = printing.Print('vector', attrs = [ 'shape' ])
                 
 
-        print("PRINTING!!!", printing_op(self._input))
+        print("PRINTING!!!", self._input.shape)
 
 
 class Layer(object):

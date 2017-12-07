@@ -224,7 +224,7 @@ def addBoundary(vox):
     # unique, counts = np.unique(vox, return_counts=True)
     # print(dict(zip(unique, counts)),"vox")
 
-    # newvox[(boundary==1)] = 2
+    newvox[(boundary==1)] = 2
     # unique, counts = np.unique(newvox, return_counts=True)
     # print(dict(zip(unique, counts)),"newvox")
 
