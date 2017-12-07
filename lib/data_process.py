@@ -218,7 +218,15 @@ def addBoundary(vox):
         # print("--------------------------")
         return filterEnd
 
-    boundary = np.array([getBound(slice) for slice in vox])
+    boundary0 = np.array([getBound(slice) for slice in vox])
+    boundary1 = np.rollaxis(np.array([getBound(slice) for slice in np.rollaxis(vox, 1)]),1)
+    boundary2 = np.rollaxis(np.array([getBound(slice) for slice in np.rollaxis(vox, 2)]),2)
+    boundary = np.logical_or(boundary0,boundary1)
+    boundary = np.logical_or(boundary,boundary2)
+    boundary = np.logical_and(boundary,newvox)
+    boundary[(boundary==True)] = 1
+    boundary[(boundary==False)] = 0
+
     # unique, counts = np.unique(newvox, return_counts=True)
     # print(dict(zip(unique, counts)),"newvox")
     # unique, counts = np.unique(vox, return_counts=True)

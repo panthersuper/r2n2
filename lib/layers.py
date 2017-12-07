@@ -101,9 +101,8 @@ class PrintShape(object):
         self._input = input
 
         printing_op = printing.Print('vector', attrs = [ 'shape' ])
-                
 
-        print("PRINTING!!!", self._input.shape)
+        print("PRINTING!!!, Dim: ", self._input.type.ndim)
 
 
 class Layer(object):
