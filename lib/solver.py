@@ -245,6 +245,8 @@ class Solver(object):
             rs.append(r)
         iou = np.mean(rs)
 
+        np.array(prediction).tofile('myprediction.dat')
+
 
         if no_loss_return:
             return prediction, activations

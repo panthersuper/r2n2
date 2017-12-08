@@ -105,10 +105,10 @@ def main():
     print('Using config:')
     pprint.pprint(cfg)
 
-    if not args.test:
-        train_net()
-    else:
-        test_net()
+    # if not args.test:
+    train_net()
+    # else:
+    #     test_net()
 
 
 if __name__ == '__main__':

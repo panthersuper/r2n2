@@ -606,6 +606,7 @@ class SoftmaxWithLoss3D(object):
         channel, only one element is one indicating the ground truth prediction
         label.
         """
+
         return tensor.mean(
             tensor.sum(-y * self.input, axis=2, keepdims=True) + tensor.log(self.sum_exp_x))
 

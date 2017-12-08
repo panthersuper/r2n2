@@ -151,7 +151,8 @@ class ReconstructionDataProcess(DataProcess):
                 voxel_data = voxel
 
                 batch_voxel[batch_id, :, 0, :, :] = voxel_data < 1
-                batch_voxel[batch_id, :, 1, :, :] = voxel_data
+                batch_voxel[batch_id, :, 1, :, :] = voxel_data == 1
+                batch_voxel[batch_id, :, 2, :, :] = (voxel_data > 1)
 
             # The following will wait until the queue frees
             self.data_queue.put((batch_img, batch_voxel), block=True)
@@ -223,7 +224,7 @@ def addBoundary(vox):
     boundary2 = np.rollaxis(np.array([getBound(slice) for slice in np.rollaxis(vox, 2)]),2)
     boundary = np.logical_or(boundary0,boundary1)
     boundary = np.logical_or(boundary,boundary2)
-    boundary = np.logical_and(boundary,newvox)
+    # boundary = np.logical_and(boundary,newvox)
     boundary[(boundary==True)] = 1
     boundary[(boundary==False)] = 0
 
@@ -233,6 +234,8 @@ def addBoundary(vox):
     # print(dict(zip(unique, counts)),"vox")
 
     newvox[(boundary==1)] = 2
+    newvox[(vox==1)] = 1
+
     # unique, counts = np.unique(newvox, return_counts=True)
     # print(dict(zip(unique, counts)),"newvox")
 

@@ -11,10 +11,25 @@ def evaluate_voxel_prediction(preds, gt, thresh):
     return np.array([diff, intersection, union, num_fp, num_fn])
 
 def get_iou(preds, gt, thresh):
-    preds_occupy = preds[:, 1:, :, :] >= thresh
-    diff = np.sum(np.logical_xor(preds_occupy, gt[:, 1:, :, :]))
-    intersection = np.sum(np.logical_and(preds_occupy, gt[:, 1:, :, :]))
-    union = np.sum(np.logical_or(preds_occupy, gt[:, 1:, :, :]))
+    preds_occupy1 = preds[:, 1:, :, :] >= 0.3
+    preds_occupy2 = preds[:, 2:, :, :] >= 0.3
+    preds_occupy = np.logical_or(preds_occupy1, preds_occupy2)
+
+    gt_occupy1 = gt[:, 1:, :, :]
+    gt_occupy2 = gt[:, 2:, :, :]
+    gt_occupy = np.logical_or(gt_occupy1, gt_occupy2)
+
+    # preds_occupy2 = preds[:, 2:, :, :] >= thresh
+
+    # unique, counts = np.unique(preds_occupy, return_counts=True)
+    # print(dict(zip(unique, counts)),"preds_occupy")
+    # unique, counts = np.unique(gt_occupy, return_counts=True)
+    # print(dict(zip(unique, counts)),"gt_occupy")
+
+
+    diff = np.sum(np.logical_xor(preds_occupy, gt_occupy))
+    intersection = np.sum(np.logical_and(preds_occupy, gt_occupy))
+    union = np.sum(np.logical_or(preds_occupy, gt_occupy))
     return intersection / union
 
 
