@@ -198,7 +198,12 @@ def addBoundary(vox):
     vox_5d = np.moveaxis(vox_5d, 1, 4)
 
     output = tf.nn.conv3d(vox_5d,filter_np,padding="SAME",strides=[1,1,1,1,1])
-    sess = tf.Session()
+
+    config = tf.ConfigProto(
+            device_count = {'GPU': 0}
+        )
+    sess = tf.Session(config=config)
+
     with sess.as_default():
 
         # print(type(tf.constant([1,2,3]).eval()))

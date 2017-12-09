@@ -8,6 +8,7 @@ from datetime import datetime
 from lib.config import cfg
 from lib.utils import Timer
 from lib.voxel import get_iou
+from scipy import io
 
 
 def max_or_nan(params):
@@ -248,7 +249,9 @@ class Solver(object):
             rs.append(r)
         iou = np.mean(rs)
 
-        np.array(prediction).tofile('myprediction.dat')
+        # print(prediction,"sssssssss",np.shape(prediction))
+        # prediction.tofile('myprediction.dat')
+        io.savemat('test.mat', {'mydata': prediction})
 
 
         if no_loss_return:
