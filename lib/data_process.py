@@ -176,9 +176,6 @@ class ReconstructionDataProcess(DataProcess):
             voxel = read_as_3d_array(f)
             voxel = np.array(voxel.data).astype(np.float32)
 
-            # addBoundary(voxel)
-
-
         return addBoundary(voxel)
 
 def addBoundary(vox):
@@ -200,35 +197,6 @@ def addBoundary(vox):
     vox_5d = np.reshape(vox,[1,1,32,32,32])
     vox_5d = np.moveaxis(vox_5d, 1, 4)
 
-    # filters = torch.autograd.Variable(torch.from_numpy(filter_np)).float()
-    # inputs = torch.autograd.Variable(torch.from_numpy(vox_5d)).float()
-    # class testxx(object):
-    #     def __init__(self, input1,input2):
-    #         self.input = input1
-    #         self.input2 = input2
-    #         self.output = theano.tensor.nnet.conv3d2d.conv3d(self.input,self.input2,signals_shape=[1,32,1,32,32], filters_shape=[1,3,1,3,3], border_mode='valid')
-    # a = theano.tensor.matrix(dtype=theano.config.floatX)
-    # b = theano.tensor.matrix(dtype=theano.config.floatX)
-
-    # ttt = testxx(a, b)
-
-
-    # f = theano.function([ttt.input,ttt.input2], [ttt.output])
-
-    # # f = testxx(vox_5d, filter_np)
-    # output = f.eval({testxx.input: vox_5d,
-    #                 testxx.input2: filter_np})
-
-    # output = theano.tensor.nnet.conv3d2d.conv3d(vox_5d,filter_np,signals_shape=[1,32,1,32,32], filters_shape=[1,3,1,3,3], border_mode='half')
-
-    # f = theano.function([d, w], [theano.tensor.nnet.conv3d2d.conv3d(d, w)])
-    # output = f(vox_5d, filter_np)
-
-    # output = theano.tensor.nnet.conv3d2d.conv3d(vox_5d, filter_np)
-
-    # output = torch.nn.functional.conv3d(vox_5d, filter_np,padding=0)
-    # output = output.data.numpy()
-
     output = tf.nn.conv3d(vox_5d,filter_np,padding="SAME",strides=[1,1,1,1,1])
     sess = tf.Session()
     with sess.as_default():
@@ -242,8 +210,8 @@ def addBoundary(vox):
 
     newvox[(i_am_boundary==1)] = 2
 
-    unique, counts = np.unique(newvox, return_counts=True)
-    print(dict(zip(unique, counts)),"newvox")
+    # unique, counts = np.unique(newvox, return_counts=True)
+    # print(dict(zip(unique, counts)),"newvox")
 
     return vox
 

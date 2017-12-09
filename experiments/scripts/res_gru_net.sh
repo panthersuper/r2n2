@@ -21,7 +21,7 @@ export THEANO_FLAGS="floatX=float32,device=gpu,assert_no_cpu_op='raise'"
 # optimizer=fast_compile,cycle_detection=fast
 
 python main.py \
-      --batch-size 8 \
+      --batch-size 12 \
       --iter 60000 \
       --out $OUT_PATH \
       --model $NET_NAME \

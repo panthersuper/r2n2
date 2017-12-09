@@ -1,3 +1,19 @@
+import sys
+import time
+import theano
+import numpy as np
+import traceback
+from PIL import Image
+from six.moves import queue
+from multiprocessing import Process, Event
+
+from lib.config import cfg
+from lib.data_augmentation import preprocess_img
+from lib.data_io import get_voxel_file, get_rendering_file
+from lib.binvox_rw import read_as_3d_array
+from scipy import signal
+import theano.tensor as tensor
+
 from collections import namedtuple
 import numpy as np
 
@@ -64,60 +80,68 @@ def tarjan(g):
 ############# End tarjan SCC #####################
 
 def sym(voxel):
-	batchsize = voxel.shape[0]
-	result = []
+        shape = tensor.shape(voxel)
+        batchsize = shape[0]
+        result = tensor.alloc(0.0,  # Value to fill the tensor
+                shape[0],
+                1,
+                3)
+        
+        left1 = voxel[:, 0:16,:,:, :].reshape((batchsize, -1))
+        right1 = voxel[:, 31:15:-1, :,:, :].reshape((batchsize, -1))
+        p1 = (left1 * right1).sum(axis=1, keepdims=True)
 
-	left1 = voxel[:, 0:16,:, :].reshape((batchsize, -1))
-	right1 = voxel[:, 31:15:-1, :, :].reshape((batchsize, -1))
-	p1 = (left1 * right1).sum(axis=1, keepdims=True)
+        left2 = voxel[:, :, :,0:16,:].reshape((batchsize, -1))
+        right2 = voxel[:, :, :,31:15:-1, :].reshape((batchsize, -1))
+        p2 = (left2 * right2).sum(axis=1, keepdims=True)
 
-	left2 = voxel[:, :, 0:16,:].reshape((batchsize, -1))
-	right2 = voxel[:, :, 31:15:-1, :].reshape((batchsize, -1))
-	p2 = (left2 * right2).sum(axis=1, keepdims=True)
+        left3 = voxel[:, :, :, :,0:16].reshape((batchsize, -1))
+        right3 = voxel[:, :, :, :,31:15:-1].reshape((batchsize, -1))
+        p3 = (left3 * right3).sum(axis=1, keepdims=True)
 
-	left3 = voxel[:, :, :, 0:16].reshape((batchsize, -1))
-	right3 = voxel[:, :, :, 31:15:-1].reshape((batchsize, -1))
-	p3 = (left3 * right3).sum(axis=1, keepdims=True)
+        num = (left1.sum()+ right1.sum()) // 2
 
-	num = (left1.sum()+ right1.sum()) // 2
+        tensor.set_subtensor(result[:, :, 0],p1)
+        tensor.set_subtensor(result[:, :, 1],p2)
+        tensor.set_subtensor(result[:, :, 2],p3)
 
-	return np.concatenate([p1, p2, p3], axis=1) / num
+        return result / num
 
 
 def SCC(voxel32):
-	num = []
-	for b in range(voxel32.shape[0]):
-		graph = {}
-		for i in range(32):
-			for j in range(32):
-				for k in range(32):
-					if voxel32[b, i, j, k] == 1:
-						graph[(i, j, k)] = []
-						neighbors = [(i+1, j, k), (i-1, j, k), (i, j+1, k), (i, j-1, k), (i, j, k+1), (i, j, k-1)]
-						for x, y, z in neighbors:
-							if ((0 <= x < 32) and (0<=y<32) and (0<=z<32) and (voxel32[b, x, y, z] == 1)):
-								graph[(i, j, k)].append((x, y, z))
-		num.append([len(tarjan(graph))])
-	return np.array(num)
+        num = []
+        for b in range(tensor.shape(voxel32)[0].eval()):
+                graph = {}
+                for i in range(32):
+                        for j in range(32):
+                                for k in range(32):
+                                        if voxel32[b, i, 0, j, k] == 1:
+                                                graph[(i, j, k)] = []
+                                                neighbors = [(i+1, j, k), (i-1, j, k), (i, j+1, k), (i, j-1, k), (i, j, k+1), (i, j, k-1)]
+                                                for x, y, z in neighbors:
+                                                        if ((0 <= x < 32) and (0<=y<32) and (0<=z<32) and (voxel32[b, x, 0, y, z] == 1)):
+                                                                graph[(i, j, k)].append((x, y, z))
+                num.append([len(tarjan(graph))])
+        return np.array(num)
 
 def test():
-	from scipy.io import loadmat
-	def load_label(modelpath):
-	    #voxel_fn = get_voxel_file(model_id)
-	    with open(modelpath, 'rb') as f:
-	        voxel = loadmat(f)['input']
-	    return voxel
+        from scipy.io import loadmat
+        def load_label(modelpath):
+            #voxel_fn = get_voxel_file(model_id)
+            with open(modelpath, 'rb') as f:
+                voxel = loadmat(f)['input']
+            return voxel
 
-	voxel = np.array(load_label('../ShapeNet/train_voxels/000005/model.mat'))
-	voxel32 = np.zeros((1, 32, 32, 32))
-	for i in range(32):
-		for j in range(32):
-			for k in range(32):
-				if np.sum(voxel[0, i*8:(i+1)*8, j*8:(j+1)*8, k*8:(k+1)*8].reshape(512)) > 0:
-					voxel32[0, i, j, k] = 1
+        voxel = np.array(load_label('../ShapeNet/train_voxels/000005/model.mat'))
+        voxel32 = np.zeros((1, 32, 32, 32))
+        for i in range(32):
+                for j in range(32):
+                        for k in range(32):
+                                if np.sum(voxel[0, i*8:(i+1)*8, j*8:(j+1)*8, k*8:(k+1)*8].reshape(512)) > 0:
+                                        voxel32[0, i, j, k] = 1
 
-	print(sym(voxel32))
-	print(SCC(voxel32))
+        print(sym(voxel32))
+        print(SCC(voxel32))
 
 
 # test()
