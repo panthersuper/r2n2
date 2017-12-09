@@ -15,6 +15,9 @@ from lib.data_augmentation import preprocess_img
 from lib.data_io import get_voxel_file, get_rendering_file
 from lib.binvox_rw import read_as_3d_array
 from scipy import signal
+from theano.tensor import _shared
+import tensorflow as tf
+
 
 def print_error(func):
     '''Flush out error messages. Mainly used for debugging separate processes'''
@@ -181,67 +184,68 @@ class ReconstructionDataProcess(DataProcess):
 def addBoundary(vox):
     newvox = vox
 
-    # print(voxel)
-    # unique, counts = np.unique(vox, return_counts=True)
-    # print(dict(zip(unique, counts)),"output")
+    filter_np = np.array(
+            [
+                [0,0,0],
+                [0,1,0],
+                [0,0,0],
+                [0,1,0],
+                [1,0,1],
+                [0,1,0],
+                [0,0,0],
+                [0,1,0],
+                [0,0,0]
+            ])
+    filter_np = np.reshape(filter_np,[3,3,3,1,1])
+    vox_5d = np.reshape(vox,[1,1,32,32,32])
+    vox_5d = np.moveaxis(vox_5d, 1, 4)
 
-    # sig = vox[:,:,0]
+    # filters = torch.autograd.Variable(torch.from_numpy(filter_np)).float()
+    # inputs = torch.autograd.Variable(torch.from_numpy(vox_5d)).float()
+    # class testxx(object):
+    #     def __init__(self, input1,input2):
+    #         self.input = input1
+    #         self.input2 = input2
+    #         self.output = theano.tensor.nnet.conv3d2d.conv3d(self.input,self.input2,signals_shape=[1,32,1,32,32], filters_shape=[1,3,1,3,3], border_mode='valid')
+    # a = theano.tensor.matrix(dtype=theano.config.floatX)
+    # b = theano.tensor.matrix(dtype=theano.config.floatX)
 
-    def getBound(sig):
-        winX = np.matrix([[-1, 0, 1],
-                        [-2, 0, 2],
-                        [-1, 0, 1]])
-        filteredX = signal.convolve2d(sig, winX, boundary='symm', mode='same')
-
-        winY = np.matrix([[-1, -2, -1],
-                        [0 , 0 , 0],
-                        [1,  2,  1]])
-        filteredY = signal.convolve2d(sig, winY, boundary='symm', mode='same')
-
-        filteredX[(filteredX !=0)] = 1
-        filteredY[(filteredY !=0)] = 1
-        filterEnd = np.logical_or(filteredX,filteredY)
-        # filteredX = (filteredX !=0)
-
-        filterEnd = np.logical_and(filterEnd,sig)
-
-        filterEnd[(filterEnd==True)] = 1
-        filterEnd[(filterEnd==False)] = 0
-
-
-        # print("--------------------------")
-        # unique, counts = np.unique(filteredX, return_counts=True)
-        # print(dict(zip(unique, counts)),"filteredX")
-        # unique, counts = np.unique(filteredY, return_counts=True)
-        # print(dict(zip(unique, counts)),"filteredY")
-        # unique, counts = np.unique(filterEnd, return_counts=True)
-        # print(dict(zip(unique, counts)),"filterEnd")
-        # print("--------------------------")
-        return filterEnd
-
-    boundary0 = np.array([getBound(slice) for slice in vox])
-    boundary1 = np.rollaxis(np.array([getBound(slice) for slice in np.rollaxis(vox, 1)]),1)
-    boundary2 = np.rollaxis(np.array([getBound(slice) for slice in np.rollaxis(vox, 2)]),2)
-    boundary = np.logical_or(boundary0,boundary1)
-    boundary = np.logical_or(boundary,boundary2)
-    # boundary = np.logical_and(boundary,newvox)
-    boundary[(boundary==True)] = 1
-    boundary[(boundary==False)] = 0
-
-    # unique, counts = np.unique(newvox, return_counts=True)
-    # print(dict(zip(unique, counts)),"newvox")
-    # unique, counts = np.unique(vox, return_counts=True)
-    # print(dict(zip(unique, counts)),"vox")
-
-    newvox[(boundary==1)] = 2
-    newvox[(vox==1)] = 1
-
-    # unique, counts = np.unique(newvox, return_counts=True)
-    # print(dict(zip(unique, counts)),"newvox")
+    # ttt = testxx(a, b)
 
 
-    return newvox
+    # f = theano.function([ttt.input,ttt.input2], [ttt.output])
 
+    # # f = testxx(vox_5d, filter_np)
+    # output = f.eval({testxx.input: vox_5d,
+    #                 testxx.input2: filter_np})
+
+    # output = theano.tensor.nnet.conv3d2d.conv3d(vox_5d,filter_np,signals_shape=[1,32,1,32,32], filters_shape=[1,3,1,3,3], border_mode='half')
+
+    # f = theano.function([d, w], [theano.tensor.nnet.conv3d2d.conv3d(d, w)])
+    # output = f(vox_5d, filter_np)
+
+    # output = theano.tensor.nnet.conv3d2d.conv3d(vox_5d, filter_np)
+
+    # output = torch.nn.functional.conv3d(vox_5d, filter_np,padding=0)
+    # output = output.data.numpy()
+
+    output = tf.nn.conv3d(vox_5d,filter_np,padding="SAME",strides=[1,1,1,1,1])
+    sess = tf.Session()
+    with sess.as_default():
+
+        # print(type(tf.constant([1,2,3]).eval()))
+        output = np.reshape(output.eval(),[32,32,32])
+
+    neighbor_has_0 = output < 6
+    i_am_1 = vox
+    i_am_boundary = np.logical_and(neighbor_has_0,i_am_1)*1
+
+    newvox[(i_am_boundary==1)] = 2
+
+    unique, counts = np.unique(newvox, return_counts=True)
+    print(dict(zip(unique, counts)),"newvox")
+
+    return vox
 
 def kill_processes(queue, processes):
     print('Signal processes')
