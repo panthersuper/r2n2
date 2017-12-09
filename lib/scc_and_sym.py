@@ -83,7 +83,7 @@ def sym(voxel):
         shape = tensor.shape(voxel)
         batchsize = shape[0]
         result = tensor.alloc(0.0,  # Value to fill the tensor
-                shape[0],
+                batchsize,
                 1,
                 3)
         
@@ -101,9 +101,9 @@ def sym(voxel):
 
         num = (left1.sum()+ right1.sum()) // 2
 
-        tensor.set_subtensor(result[:, :, 0],p1)
-        tensor.set_subtensor(result[:, :, 1],p2)
-        tensor.set_subtensor(result[:, :, 2],p3)
+        result = tensor.set_subtensor(result[:, :, 0],p1)
+        result = tensor.set_subtensor(result[:, :, 1],p2)
+        result = tensor.set_subtensor(result[:, :, 2],p3)
 
         return result / num
 
