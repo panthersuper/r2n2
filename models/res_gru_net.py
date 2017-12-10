@@ -207,6 +207,7 @@ class ResidualGRUNet(Net):
         self.params = get_trainable_params()
         self.output = softmax_loss.prediction()
         self.activations = [update_all]
+        self.sym = softmax_loss.get_sym(self.y)
 
         # print("-----------------------------------------------------")
         # print(self.x,"input")

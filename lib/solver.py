@@ -8,6 +8,7 @@ from datetime import datetime
 from lib.config import cfg
 from lib.utils import Timer
 from lib.voxel import get_iou
+from scipy import io
 
 
 def max_or_nan(params):
@@ -217,7 +218,7 @@ class Solver(object):
             # Lazy load the test function
             self._test_output = theano.function([self.net.x, self.net.y],
                                                 [self.net.output,
-                                                 self.net.loss,
+                                                 self.net.loss,self.net.sym,
                                                  *self.net.activations])
 
         # If the ground truth data is given, evaluate loss. O.w. feed zeros and
@@ -236,7 +237,10 @@ class Solver(object):
 
         prediction = results[0]
         loss = results[1]
-        activations = results[2:]
+        sym = results[2]
+        activations = results[3:]
+
+        # print("sym",sym)
 
         rs = []
 
@@ -245,7 +249,9 @@ class Solver(object):
             rs.append(r)
         iou = np.mean(rs)
 
-        np.array(prediction).tofile('myprediction.dat')
+        # print(prediction,"sssssssss",np.shape(prediction))
+        # prediction.tofile('myprediction.dat')
+        io.savemat('test.mat', {'mydata': prediction})
 
 
         if no_loss_return:

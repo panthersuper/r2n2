@@ -9,12 +9,17 @@ import traceback
 from PIL import Image
 from six.moves import queue
 from multiprocessing import Process, Event
+import scipy.io as spio
 
 from lib.config import cfg
 from lib.data_augmentation import preprocess_img
 from lib.data_io import get_voxel_file, get_rendering_file
 from lib.binvox_rw import read_as_3d_array
 from scipy import signal
+from theano.tensor import _shared
+# import tensorflow as tf
+# import os
+
 
 def print_error(func):
     '''Flush out error messages. Mainly used for debugging separate processes'''
@@ -169,79 +174,58 @@ class ReconstructionDataProcess(DataProcess):
 
     def load_label(self, category, model_id):
         voxel_fn = get_voxel_file(category, model_id)
-        with open(voxel_fn, 'rb') as f:
-            voxel = read_as_3d_array(f)
-            voxel = np.array(voxel.data).astype(np.float32)
+        voxel_fn = voxel_fn.split(".")[0]+".mat"
 
-            # addBoundary(voxel)
+        voxels = spio.loadmat(voxel_fn, squeeze_me=True)["mydata"]
+        voxels = np.asarray(voxels)
 
+        return voxels# addBoundary(voxel)
 
-        return addBoundary(voxel)
+# def addBoundary(vox):
+#     newvox = vox
 
-def addBoundary(vox):
-    newvox = vox
+#     filter_np = np.array(
+#             [
+#                 [0,0,0],
+#                 [0,1,0],
+#                 [0,0,0],
+#                 [0,1,0],
+#                 [1,0,1],
+#                 [0,1,0],
+#                 [0,0,0],
+#                 [0,1,0],
+#                 [0,0,0]
+#             ])
+#     filter_np = np.reshape(filter_np,[3,3,3,1,1])
+#     vox_5d = np.reshape(vox,[1,1,32,32,32])
+#     vox_5d = np.moveaxis(vox_5d, 1, 4)
 
-    # print(voxel)
-    # unique, counts = np.unique(vox, return_counts=True)
-    # print(dict(zip(unique, counts)),"output")
+#     os.environ["CUDA_VISIBLE_DEVICES"]=""
 
-    # sig = vox[:,:,0]
+#     output = tf.nn.conv3d(vox_5d,filter_np,padding="SAME",strides=[1,1,1,1,1])
 
-    def getBound(sig):
-        winX = np.matrix([[-1, 0, 1],
-                        [-2, 0, 2],
-                        [-1, 0, 1]])
-        filteredX = signal.convolve2d(sig, winX, boundary='symm', mode='same')
+#     config = tf.ConfigProto(
+#             device_count = {'GPU': 0}
+#         )
+#     sess = tf.Session(config=config)
 
-        winY = np.matrix([[-1, -2, -1],
-                        [0 , 0 , 0],
-                        [1,  2,  1]])
-        filteredY = signal.convolve2d(sig, winY, boundary='symm', mode='same')
+#     with sess.as_default():
 
-        filteredX[(filteredX !=0)] = 1
-        filteredY[(filteredY !=0)] = 1
-        filterEnd = np.logical_or(filteredX,filteredY)
-        # filteredX = (filteredX !=0)
+#         # print(type(tf.constant([1,2,3]).eval()))
+#         output = np.reshape(output.eval(),[32,32,32])
 
-        filterEnd = np.logical_and(filterEnd,sig)
+#     neighbor_has_0 = output < 6
+#     i_am_1 = vox
+#     i_am_boundary = np.logical_and(neighbor_has_0,i_am_1)*1
 
-        filterEnd[(filterEnd==True)] = 1
-        filterEnd[(filterEnd==False)] = 0
+#     newvox[(i_am_boundary==1)] = 2
 
+#     # unique, counts = np.unique(newvox, return_counts=True)
+#     # print(dict(zip(unique, counts)),"newvox")
 
-        # print("--------------------------")
-        # unique, counts = np.unique(filteredX, return_counts=True)
-        # print(dict(zip(unique, counts)),"filteredX")
-        # unique, counts = np.unique(filteredY, return_counts=True)
-        # print(dict(zip(unique, counts)),"filteredY")
-        # unique, counts = np.unique(filterEnd, return_counts=True)
-        # print(dict(zip(unique, counts)),"filterEnd")
-        # print("--------------------------")
-        return filterEnd
+#     os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
-    boundary0 = np.array([getBound(slice) for slice in vox])
-    boundary1 = np.rollaxis(np.array([getBound(slice) for slice in np.rollaxis(vox, 1)]),1)
-    boundary2 = np.rollaxis(np.array([getBound(slice) for slice in np.rollaxis(vox, 2)]),2)
-    boundary = np.logical_or(boundary0,boundary1)
-    boundary = np.logical_or(boundary,boundary2)
-    # boundary = np.logical_and(boundary,newvox)
-    boundary[(boundary==True)] = 1
-    boundary[(boundary==False)] = 0
-
-    # unique, counts = np.unique(newvox, return_counts=True)
-    # print(dict(zip(unique, counts)),"newvox")
-    # unique, counts = np.unique(vox, return_counts=True)
-    # print(dict(zip(unique, counts)),"vox")
-
-    newvox[(boundary==1)] = 2
-    newvox[(vox==1)] = 1
-
-    # unique, counts = np.unique(newvox, return_counts=True)
-    # print(dict(zip(unique, counts)),"newvox")
-
-
-    return newvox
-
+#     return vox
 
 def kill_processes(queue, processes):
     print('Signal processes')

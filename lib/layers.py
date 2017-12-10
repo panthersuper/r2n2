@@ -7,6 +7,9 @@ import theano.tensor as tensor
 from theano.tensor.nnet import conv, conv3d2d, sigmoid
 from theano.tensor.signal import pool
 from theano import tensor as T, function, printing
+
+from lib.scc_and_sym import sym
+from lib.scc_and_sym import SCC
 trainable_params = []
 
 
@@ -607,8 +610,13 @@ class SoftmaxWithLoss3D(object):
         label.
         """
 
+        # nowy = theano.tensor.reshape(y,[y.shape[0],32,32,32])
+        # print("sym", y.eval())
+
         return tensor.mean(
             tensor.sum(-y * self.input, axis=2, keepdims=True) + tensor.log(self.sum_exp_x))
+    def get_sym(self,y):
+        return sym(y)
 
 
 class ConcatLayer(Layer):
