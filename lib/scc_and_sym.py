@@ -64,41 +64,49 @@ def tarjan(g):
 ############# End tarjan SCC #####################
 
 def sym(voxel):
-	batchsize = voxel.shape[0]
-	result = []
+	shape = tensor.shape(voxel)
+    batchsize = shape[0]
+    result = []
 
-	left1 = voxel[:, 0:16,:, :].reshape((batchsize, -1))
-	right1 = voxel[:, 31:15:-1, :, :].reshape((batchsize, -1))
-	p1 = (left1 * right1).sum(axis=1, keepdims=True)
+    left1 = voxel[:, 0:16,:,:, :].reshape((batchsize, -1))
+    right1 = voxel[:, 31:15:-1, :,:, :].reshape((batchsize, -1))
+    p1 = (left1 * right1).sum(axis=1, keepdims=True)
 
-	left2 = voxel[:, :, 0:16,:].reshape((batchsize, -1))
-	right2 = voxel[:, :, 31:15:-1, :].reshape((batchsize, -1))
-	p2 = (left2 * right2).sum(axis=1, keepdims=True)
+    left2 = voxel[:, :,:, 0:16,:].reshape((batchsize, -1))
+    right2 = voxel[:, :,:, 31:15:-1, :].reshape((batchsize, -1))
+    p2 = (left2 * right2).sum(axis=1, keepdims=True)
 
-	left3 = voxel[:, :, :, 0:16].reshape((batchsize, -1))
-	right3 = voxel[:, :, :, 31:15:-1].reshape((batchsize, -1))
-	p3 = (left3 * right3).sum(axis=1, keepdims=True)
+    left3 = voxel[:, :,:, :, 0:16].reshape((batchsize, -1))
+    right3 = voxel[:, :,:, :, 31:15:-1].reshape((batchsize, -1))
+    p3 = (left3 * right3).sum(axis=1, keepdims=True)
 
-	num = (left1.sum()+ right1.sum()) // 2
-
-	return np.concatenate([p1, p2, p3], axis=1) / num
+    num = (left1.sum()+ right1.sum()) // 2
+    
+    result = tensor.alloc(0.0, batchsize, 1, 3)
+    result = tensor.set_subtensor(result[:,:,0], p1)
+    result = tensor.set_subtensor(result[:,:,1], p2)
+    result = tensor.set_subtensor(result[:,:,2], p3)
+    
+    return result / num
 
 
 def SCC(voxel32):
 	num = []
-	for b in range(voxel32.shape[0]):
-		graph = {}
-		for i in range(32):
-			for j in range(32):
-				for k in range(32):
-					if voxel32[b, i, j, k] == 1:
-						graph[(i, j, k)] = []
-						neighbors = [(i+1, j, k), (i-1, j, k), (i, j+1, k), (i, j-1, k), (i, j, k+1), (i, j, k-1)]
-						for x, y, z in neighbors:
-							if ((0 <= x < 32) and (0<=y<32) and (0<=z<32) and (voxel32[b, x, y, z] == 1)):
-								graph[(i, j, k)].append((x, y, z))
-		num.append([len(tarjan(graph))])
-	return np.array(num)
+    shape = tensor.shape(voxel)
+    result = tensor.alloc(0.0, 8, 1)    #Change batchsize
+    for b in range(8):					#Change batchsize
+        graph = {}
+        for i in range(32):
+            for j in range(32):
+                for k in range(32):
+                    if voxel[b, i, 0, j, k] == 1:
+                        graph[(i, j, k)] = []
+                        neighbors = [(i+1, j, k), (i-1, j, k), (i, j+1, k), (i, j-1, k), (i, j, k+1), (i, j, k-1)]
+                        for x, y, z in neighbors:
+                            if ((0 <= x < 32) and (0<=y<32) and (0<=z<32) and (voxel[b, x, 0, y, z] == 1)):
+                                graph[(i, j, k)].append((x, y, z))
+        result = tensor.set_subtensor(result[b,:], len(s.tarjan(graph)))
+    return result
 
 def test():
 	from scipy.io import loadmat
