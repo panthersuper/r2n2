@@ -1,5 +1,6 @@
 from collections import namedtuple
 import numpy as np
+import theano.tensor as tensor
 
 #################### tarjan SCC ########################
 
@@ -64,7 +65,7 @@ def tarjan(g):
 ############# End tarjan SCC #####################
 
 def sym(voxel):
-	shape = tensor.shape(voxel)
+    shape = tensor.shape(voxel)
     batchsize = shape[0]
     result = []
 
@@ -89,12 +90,12 @@ def sym(voxel):
     
     return result / num
 
-
+        
 def SCC(voxel32):
-	num = []
+    num = []
     shape = tensor.shape(voxel)
     result = tensor.alloc(0.0, 8, 1)    #Change batchsize
-    for b in range(8):					#Change batchsize
+    for b in range(8):                                        #Change batchsize
         graph = {}
         for i in range(32):
             for j in range(32):
@@ -109,23 +110,23 @@ def SCC(voxel32):
     return result
 
 def test():
-	from scipy.io import loadmat
-	def load_label(modelpath):
-	    #voxel_fn = get_voxel_file(model_id)
-	    with open(modelpath, 'rb') as f:
-	        voxel = loadmat(f)['input']
-	    return voxel
+        from scipy.io import loadmat
+        def load_label(modelpath):
+            #voxel_fn = get_voxel_file(model_id)
+            with open(modelpath, 'rb') as f:
+                voxel = loadmat(f)['input']
+            return voxel
 
-	voxel = np.array(load_label('../ShapeNet/train_voxels/000005/model.mat'))
-	voxel32 = np.zeros((1, 32, 32, 32))
-	for i in range(32):
-		for j in range(32):
-			for k in range(32):
-				if np.sum(voxel[0, i*8:(i+1)*8, j*8:(j+1)*8, k*8:(k+1)*8].reshape(512)) > 0:
-					voxel32[0, i, j, k] = 1
+        voxel = np.array(load_label('../ShapeNet/train_voxels/000005/model.mat'))
+        voxel32 = np.zeros((1, 32, 32, 32))
+        for i in range(32):
+                for j in range(32):
+                        for k in range(32):
+                                if np.sum(voxel[0, i*8:(i+1)*8, j*8:(j+1)*8, k*8:(k+1)*8].reshape(512)) > 0:
+                                        voxel32[0, i, j, k] = 1
 
-	print(sym(voxel32))
-	print(SCC(voxel32))
+        print(sym(voxel32))
+        print(SCC(voxel32))
 
 
 # test()

@@ -52,7 +52,7 @@ __C.TRAIN.WORKER_LIFESPAN = 100  # if use blender, kill a worker after some iter
 __C.TRAIN.WORKER_CAPACITY = 1000  # if use OSG, load only limited number of models at a time
 __C.TRAIN.NUM_RENDERING = 24
 __C.TRAIN.NUM_VALIDATION_ITERATIONS = 24
-__C.TRAIN.VALIDATION_FREQ = 40
+__C.TRAIN.VALIDATION_FREQ = 120
 __C.TRAIN.NAN_CHECK_FREQ = 2000
 __C.TRAIN.RANDOM_NUM_VIEWS = True  # feed in random # views if n_views > 1
 
@@ -81,7 +81,7 @@ __C.TRAIN.MOMENTUM = 0.90
 # (for cross entropy loss). Too high regularization will also hinder training.
 __C.TRAIN.WEIGHT_DECAY = 0.00005
 __C.TRAIN.LOSS_LIMIT = 5  # stop training if the loss exceeds the limit
-__C.TRAIN.SAVE_FREQ = 500  # weights will be overwritten every save_freq
+__C.TRAIN.SAVE_FREQ = 2000  # weights will be overwritten every save_freq
 __C.TRAIN.PRINT_FREQ = 40
 
 #

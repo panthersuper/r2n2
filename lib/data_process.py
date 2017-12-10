@@ -174,7 +174,7 @@ class ReconstructionDataProcess(DataProcess):
 
     def load_label(self, category, model_id):
         voxel_fn = get_voxel_file(category, model_id)
-        voxel_fn = voxel_fn.split(".")[0]+".mat"
+        voxel_fn = voxel_fn.split(".binvox")[0]+".mat"
 
         voxels = spio.loadmat(voxel_fn, squeeze_me=True)["mydata"]
         voxels = np.asarray(voxels)
