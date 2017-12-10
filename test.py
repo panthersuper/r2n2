@@ -55,21 +55,39 @@ def addBoundary(vox):
 
 vox_root = './ShapeNet/ShapeNetVox32'
 
+count= 0
+for path, subdirs, files in os.walk(vox_root):
+    for name in files:
+        if fnmatch(name, '*.binvox'):
+            count+=1
 
+count1=0
 for path, subdirs, files in os.walk(vox_root):
     for name in files:
         if fnmatch(name, '*.binvox'):
 
-
+            count1+=1
             mypath = os.path.join(path,name)     
             savingpath = os.path.join(path,"model.mat")  
-            with open(mypath, 'rb') as f:
+            placeholder = os.path.join(path,"ph.mat")  
 
-                voxel = read_as_3d_array(f)
-                voxel = np.array(voxel.data).astype(np.float32)
-                voxel = addBoundary(voxel)
+            if (not os.path.isfile(savingpath)) and (not os.path.isfile(placeholder)):
 
-                unique, counts = np.unique(voxel, return_counts=True)
-                print(dict(zip(unique, counts)),"voxel")
+                data = [0]
+                io.savemat(placeholder, {'mydata': data})   
 
-                io.savemat(savingpath, {'mydata': voxel})
+                with open(mypath, 'rb') as f:
+
+                    voxel = read_as_3d_array(f)
+                    voxel = np.array(voxel.data).astype(np.float32)
+                    voxel = addBoundary(voxel)
+
+                    unique, counts = np.unique(voxel, return_counts=True)
+
+                    io.savemat(savingpath, {'mydata': voxel})
+                    # os.remove(placeholder)
+                    print(count1,count,dict(zip(unique, counts)),"voxel")
+
+            else:
+                print(count1,count)
+
