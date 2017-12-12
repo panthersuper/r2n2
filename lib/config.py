@@ -22,7 +22,7 @@ __C.CONST.N_VOX = 32
 __C.CONST.N_VIEWS = 5
 __C.CONST.BATCH_SIZE = 36
 __C.CONST.NETWORK_CLASS = 'ResidualGRUNet'
-__C.CONST.WEIGHTS = ''  # when set, load the weights from the file
+__C.CONST.WEIGHTS = './output/ResidualGRUNet/default_model/weights.npy'  # when set, load the weights from the file
 
 #
 # Directories
@@ -40,10 +40,10 @@ __C.DIR.OUT_PATH = './output/default'
 #
 __C.TRAIN = edict()
 
-__C.TRAIN.RESUME_TRAIN = False
-__C.TRAIN.INITIAL_ITERATION = 0  # when the training resumes, set the iteration number
+__C.TRAIN.RESUME_TRAIN = True
+__C.TRAIN.INITIAL_ITERATION = 35000  # when the training resumes, set the iteration number
 __C.TRAIN.USE_REAL_IMG = False
-__C.TRAIN.DATASET_PORTION = [0, 0.8]
+__C.TRAIN.DATASET_PORTION = [0, 0.9]
 
 # Data worker
 __C.TRAIN.NUM_WORKER = 1  # number of data workers
@@ -71,17 +71,17 @@ __C.TRAIN.SIMPLE_BACKGROUND_RATIO = 0.5  # ratio of the simple backgrounded imag
 
 # Learning
 # For SGD use 0.1, for ADAM, use 0.0001
-__C.TRAIN.DEFAULT_LEARNING_RATE = 1e-4
+__C.TRAIN.DEFAULT_LEARNING_RATE = 1e-6
 __C.TRAIN.POLICY = 'adam'  # def: sgd, adam
 # The EasyDict can't use dict with integers as keys
-__C.TRAIN.LEARNING_RATES = {'20000': 1e-5, '60000': 1e-6}
+__C.TRAIN.LEARNING_RATES = {'20000': 1e-5, '40000': 1e-6}
 __C.TRAIN.MOMENTUM = 0.90
 # weight decay or regularization constant. If not set, the loss can diverge
 # after the training almost converged since weight can increase indefinitely
 # (for cross entropy loss). Too high regularization will also hinder training.
 __C.TRAIN.WEIGHT_DECAY = 0.00005
 __C.TRAIN.LOSS_LIMIT = 5  # stop training if the loss exceeds the limit
-__C.TRAIN.SAVE_FREQ = 2000  # weights will be overwritten every save_freq
+__C.TRAIN.SAVE_FREQ = 500  # weights will be overwritten every save_freq
 __C.TRAIN.PRINT_FREQ = 40
 
 #

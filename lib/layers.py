@@ -7,6 +7,7 @@ import theano.tensor as tensor
 from theano.tensor.nnet import conv, conv3d2d, sigmoid
 from theano.tensor.signal import pool
 from theano import tensor as T, function, printing
+from models.net import Net, tensor5
 
 from lib.scc_and_sym import sym
 from lib.scc_and_sym import SCC
@@ -16,6 +17,14 @@ trainable_params = []
 def get_trainable_params():
     global trainable_params
     return trainable_params
+
+www = tensor5()
+fff = tensor5()
+# batch_size = T.dscalar('batch_size')
+
+
+zzz = theano.tensor.nnet.conv3d(www,fff,(1,32,1,32,32),(1,3,1,3,3),border_mode='half')
+hhh = function([www, fff], zzz)
 
 
 class Weight(object):
@@ -614,9 +623,119 @@ class SoftmaxWithLoss3D(object):
         # print("sym", y.eval())
 
         return tensor.mean(
-            tensor.sum(-y * self.input, axis=2, keepdims=True) + tensor.log(self.sum_exp_x))
-    def get_sym(self,y):
-        return sym(y)
+            tensor.sum(-y * self.input, axis=2, keepdims=True) + tensor.log(self.sum_exp_x)) #+ self.sym_loss(y) + self.loc_loss()
+    
+    def default_loss(self, y):
+        """
+        y must be a tensor that has the same dimensions as the input. For each
+        channel, only one element is one indicating the ground truth prediction
+        label.
+        """
+
+        return tensor.mean(
+            tensor.sum(-y * self.input, axis=2, keepdims=True) + tensor.log(self.sum_exp_x))    
+
+    def sym_loss(self,y):
+        # if target's sym is (close to) 1
+        #   loss minimize 1 - my_sym
+        # else
+        #   loss ignored (0)
+
+        res = sym(y)
+        res = theano.tensor.switch(theano.tensor.neq(res, 1), 0, res) # c with 0s replaced by VALUE_WHEN_0
+        # [batch], 1 for sym, 0 for unsym
+
+        result = self.prediction() # batch*32*3*32*32
+        shape = tensor.shape(result)
+        batchsize = shape[0]
+        result = result.argmax(axis=2,keepdims=False) # batch*32*1*32*32
+
+        x_zero = theano.tensor.switch(theano.tensor.neq(result, 0), 0, result)
+        x_zero = theano.tensor.switch(theano.tensor.eq(result, 0), 1, x_zero)
+
+        x_one = theano.tensor.switch(theano.tensor.neq(result, 1), 0, result)
+        x_one = theano.tensor.switch(theano.tensor.eq(result, 1), 1, x_one)
+
+        x_two = theano.tensor.switch(theano.tensor.neq(result, 2), 0, result)
+        x_two = theano.tensor.switch(theano.tensor.eq(result, 2), 1, x_two)
+
+        x = tensor.alloc(0, batchsize,32,3,32,32)    # Change batchsize
+        x = tensor.set_subtensor(x[:,:,0,:,:], x_zero)
+        x = tensor.set_subtensor(x[:,:,1,:,:], x_zero)
+        x = tensor.set_subtensor(x[:,:,2,:,:], x_zero)
+
+        sym_x = res * (1-sym(x))
+
+        return tensor.sum(sym_x)
+
+    def scc_loss(self):
+
+        # minimize scc
+        pass
+    
+    def loc_loss(self):
+        #evaluate local conditions
+
+        result = self.prediction() # batch*32*3*32*32
+        shape = tensor.shape(result)
+        batchsize = shape[0]
+
+        result = result.argmax(axis=2,keepdims=False)*1.0 # batch*32*1*32*32  good
+
+        # test neighbor
+        filter_np = tensor.alloc(0.0, 1,3,1,3,3)    #Change batchsize
+        filter_np = tensor.set_subtensor(filter_np[0,0,0,1,1], 1.0)
+        filter_np = tensor.set_subtensor(filter_np[0,2,0,1,1], 1.0)
+        filter_np = tensor.set_subtensor(filter_np[0,1,0,0,1], 1.0)
+        filter_np = tensor.set_subtensor(filter_np[0,1,0,2,1], 1.0)
+        filter_np = tensor.set_subtensor(filter_np[0,1,0,1,0], 1.0)
+        filter_np = tensor.set_subtensor(filter_np[0,1,0,1,2], 1.0) #good
+
+        x_zero = T.eq(result,0.0)*1.0 #working
+        x_zero = T.reshape(x_zero,[batchsize,32,1,32,32])
+        x_one = T.eq(result,1.0)*1.0
+        x_one = T.reshape(x_one,[batchsize,32,1,32,32])
+        x_two = T.eq(result,2.0)*1.0
+        x_two = T.reshape(x_two,[batchsize,32,1,32,32])
+
+        conv_zero = conv3d2d.conv3d(x_zero, filter_np,border_mode='half') # working
+        conv_one = conv3d2d.conv3d(x_one, filter_np,border_mode='half')  
+        conv_two = conv3d2d.conv3d(x_two, filter_np,border_mode='half')
+
+        has_zero_neighbor = T.gt(conv_zero,0.0)*1.0
+        has_one_neighbor = T.gt(conv_one,0.0)*1.0
+        has_two_neighbor = T.gt(conv_two,0.0)*1.0
+
+        no_zero_neighbor = T.eq(conv_zero,0.0)*1.0
+        no_one_neighbor = T.eq(conv_one,0.0)*1.0
+        no_two_neighbor = T.eq(conv_two,0.0)*1.0
+
+        all_zero_neighbor = T.eq(conv_zero,6.0)*1.0
+        all_one_neighbor = T.eq(conv_one,6.0)*1.0
+        all_two_neighbor = T.eq(conv_two,6.0)*1.0
+
+        not_all_zero_neighbor = T.lt(conv_zero,6.0)*1.0
+        not_all_one_neighbor = T.lt(conv_one,6.0)*1.0
+        not_all_two_neighbor = T.lt(conv_two,6.0)*1.0
+
+        # bad conditions:
+        # cond1 - zero + any one
+        cond1 = x_zero * has_one_neighbor
+        # cond2 - zero + all two
+        cond2 = x_zero * all_two_neighbor
+        # cond3 - two + all zero
+        cond3 = x_two * all_zero_neighbor
+        # cond4 - two + all one
+        cond4 = x_two * all_one_neighbor
+        # cond5 - two + all two
+        cond5 = x_two * all_two_neighbor
+
+        cond = (T.gt((cond1 + cond2 + cond3 + cond4 + cond5),0.0))*1.0 # batch*32*1*32*32
+        cond = cond.reshape((batchsize, -1))
+        cond = cond.sum(axis=1)/(32.0*32.0*32.0)
+
+        return tensor.sum(cond)
+
 
 
 class ConcatLayer(Layer):

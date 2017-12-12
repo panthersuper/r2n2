@@ -127,6 +127,7 @@ class Solver(object):
         if cfg.TRAIN.RESUME_TRAIN:
             self.net.load(cfg.CONST.WEIGHTS)
             start_iter = cfg.TRAIN.INITIAL_ITERATION
+            print("loaded training weight ",cfg.CONST.WEIGHTS, "start at ", cfg.TRAIN.INITIAL_ITERATION)
 
         # Setup learning rates
         lr = cfg.TRAIN.DEFAULT_LEARNING_RATE
@@ -168,12 +169,20 @@ class Solver(object):
                 # Print test loss and params to check convergence every N iterations
                 val_losses = []
                 val_ious = []
+                val_default_losss = []
+                val_locs = []
+                val_syms = []
                 for i in range(cfg.TRAIN.NUM_VALIDATION_ITERATIONS):
                     batch_img, batch_voxel = val_queue.get()
-                    _, val_loss, val_iou, _ = self.test_output(batch_img, batch_voxel)
+                    _, val_loss, val_iou, val_default_loss, val_loc, val_sym, _ = self.test_output(batch_img, batch_voxel)
                     val_losses.append(val_loss)
                     val_ious.append(val_iou)
-                print('%s Test loss: %f Test IoU: %f' % (datetime.now(), np.mean(val_losses), np.mean(val_ious)))
+                    val_default_losss.append(val_default_loss)
+                    val_locs.append(val_loc)
+                    val_syms.append(val_sym)
+
+
+                print('%s Test IoU: %f Loss: %f Default_loss: %f Local_loss %f Sym_loss %f' % (datetime.now(), np.mean(val_ious), np.mean(val_losses), np.mean(val_default_losss), np.mean(val_locs), np.mean(val_syms)))
 
             if train_ind % cfg.TRAIN.NAN_CHECK_FREQ == 0:
                 # Check that the network parameters are all valid
@@ -218,7 +227,8 @@ class Solver(object):
             # Lazy load the test function
             self._test_output = theano.function([self.net.x, self.net.y],
                                                 [self.net.output,
-                                                 self.net.loss,self.net.sym,
+                                                 self.net.loss,
+                                                 self.net.sym,self.net.loc,self.net.default_loss,
                                                  *self.net.activations])
 
         # If the ground truth data is given, evaluate loss. O.w. feed zeros and
@@ -238,9 +248,27 @@ class Solver(object):
         prediction = results[0]
         loss = results[1]
         sym = results[2]
-        activations = results[3:]
+        loc = results[3]
+        default_loss = results[4]
+
+
+        activations = results[5:]
+
+        def isdtype(a, dt=np.float64):
+            try:
+                return a.dtype.num == np.dtype(dt).num
+            except AttributeError:
+                return False
 
         # print("sym",sym)
+        # print("loc",loc,loc.shape)
+        # print("default_loss",default_loss)
+        # print("loss",loss)
+
+        # print("loc",loc,loc.shape)
+        # unique, counts = np.unique(loc, return_counts=True)
+        # print(dict(zip(unique, counts)),"loc")
+
 
         rs = []
 
@@ -249,12 +277,10 @@ class Solver(object):
             rs.append(r)
         iou = np.mean(rs)
 
-        # print(prediction,"sssssssss",np.shape(prediction))
-        # prediction.tofile('myprediction.dat')
-        io.savemat('test.mat', {'mydata': prediction})
+        # io.savemat('test.mat', {'mydata': prediction})
 
 
         if no_loss_return:
             return prediction, activations
         else:
-            return prediction, loss, iou, activations
+            return prediction, loss, iou,default_loss,loc,sym, activations

@@ -47,6 +47,7 @@ def main():
     '''Main demo function'''
     # Save prediction into a file named 'prediction.obj' or the given argument
     pred_file_name = sys.argv[1] if len(sys.argv) > 1 else 'prediction.obj'
+    pred_file_boundary_name = sys.argv[1] if len(sys.argv) > 1 else 'prediction_bound.obj'
 
     # load images
     demo_imgs = load_demo_images()
@@ -65,8 +66,11 @@ def main():
     # Run the network
     voxel_prediction, _ = solver.test_output(demo_imgs)
 
+    print(voxel_prediction.shape)
+
     # Save the prediction to an OBJ file (mesh file).
     voxel2obj(pred_file_name, voxel_prediction[0, :, 1, :, :] > cfg.TEST.VOXEL_THRESH)
+    voxel2obj(pred_file_boundary_name, voxel_prediction[0, :, 2, :, :] > cfg.TEST.VOXEL_THRESH)
 
     # Use meshlab or other mesh viewers to visualize the prediction.
     # For Ubuntu>=14.04, you can install meshlab using

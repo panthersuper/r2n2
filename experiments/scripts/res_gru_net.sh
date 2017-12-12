@@ -15,13 +15,13 @@ mkdir -p $OUT_PATH
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
 
-export THEANO_FLAGS="floatX=float32,device=gpu,assert_no_cpu_op='raise'"
+export THEANO_FLAGS="floatX=float32,device=gpu,assert_no_cpu_op='raise',mode='FAST_RUN'"
 
 
 # optimizer=fast_compile,cycle_detection=fast
 
 python main.py \
-      --batch-size 12 \
+      --batch-size 14 \
       --iter 60000 \
       --out $OUT_PATH \
       --model $NET_NAME \

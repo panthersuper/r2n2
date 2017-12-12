@@ -65,37 +65,36 @@ def tarjan(g):
 ############# End tarjan SCC #####################
 
 def sym(voxel):
+    
     shape = tensor.shape(voxel)
     batchsize = shape[0]
-    result = []
-
-    left1 = voxel[:, 0:16,:,:, :].reshape((batchsize, -1))
-    right1 = voxel[:, 31:15:-1, :,:, :].reshape((batchsize, -1))
-    p1 = (left1 * right1).sum(axis=1, keepdims=True)
-
-    left2 = voxel[:, :,:, 0:16,:].reshape((batchsize, -1))
-    right2 = voxel[:, :,:, 31:15:-1, :].reshape((batchsize, -1))
-    p2 = (left2 * right2).sum(axis=1, keepdims=True)
-
-    left3 = voxel[:, :,:, :, 0:16].reshape((batchsize, -1))
-    right3 = voxel[:, :,:, :, 31:15:-1].reshape((batchsize, -1))
-    p3 = (left3 * right3).sum(axis=1, keepdims=True)
-
-    num = (left1.sum()+ right1.sum()) // 2
+    result = tensor.alloc(0.0, batchsize, 2, 3)
     
-    result = tensor.alloc(0.0, batchsize, 1, 3)
-    result = tensor.set_subtensor(result[:,:,0], p1)
-    result = tensor.set_subtensor(result[:,:,1], p2)
-    result = tensor.set_subtensor(result[:,:,2], p3)
-    
-    return result / num
+    for i in [1, 2]:
+        left1 = voxel[:, 0:16,i,:, :].reshape((batchsize, -1))
+        right1 = voxel[:, 31:15:-1, i,:, :].reshape((batchsize, -1))
+        p1 = (left1 * right1).sum(axis=1, keepdims = True)
 
-        
-def SCC(voxel32):
+        left2 = voxel[:, :,i, 0:16,:].reshape((batchsize, -1))
+        right2 = voxel[:, :,i, 31:15:-1, :].reshape((batchsize, -1))
+        p2 = (left2 * right2).sum(axis=1, keepdims = True)
+
+        left3 = voxel[:, :,i, :, 0:16].reshape((batchsize, -1))
+        right3 = voxel[:, :,i, :, 31:15:-1].reshape((batchsize, -1))
+        p3 = (left3 * right3).sum(axis=1, keepdims = True)
+
+        num = (left1.sum(axis=1, keepdims=True)+ right1.sum(axis=1, keepdims=True)) // 2  
+        result = tensor.set_subtensor(result[:,i-1:,0], p1/num)
+        result = tensor.set_subtensor(result[:,i-1:,1], p2/num)
+        result = tensor.set_subtensor(result[:,i-1:,2], p3/num)
+    
+    return result.max(axis = 2).max(axis = 1)
+    
+def SCC(voxel):
     num = []
     shape = tensor.shape(voxel)
     result = tensor.alloc(0.0, 8, 1)    #Change batchsize
-    for b in range(8):                                        #Change batchsize
+    for b in range(8):                  #Change batchsize
         graph = {}
         for i in range(32):
             for j in range(32):
@@ -110,23 +109,23 @@ def SCC(voxel32):
     return result
 
 def test():
-        from scipy.io import loadmat
-        def load_label(modelpath):
-            #voxel_fn = get_voxel_file(model_id)
-            with open(modelpath, 'rb') as f:
-                voxel = loadmat(f)['input']
-            return voxel
+    from scipy.io import loadmat
+    def load_label(modelpath):
+        #voxel_fn = get_voxel_file(model_id)
+        with open(modelpath, 'rb') as f:
+            voxel = loadmat(f)['input']
+        return voxel
 
-        voxel = np.array(load_label('../ShapeNet/train_voxels/000005/model.mat'))
-        voxel32 = np.zeros((1, 32, 32, 32))
-        for i in range(32):
-                for j in range(32):
-                        for k in range(32):
-                                if np.sum(voxel[0, i*8:(i+1)*8, j*8:(j+1)*8, k*8:(k+1)*8].reshape(512)) > 0:
-                                        voxel32[0, i, j, k] = 1
+    voxel = np.array(load_label('../ShapeNet/train_voxels/000005/model.mat'))
+    voxel32 = np.zeros((1, 32, 32, 32))
+    for i in range(32):
+        for j in range(32):
+            for k in range(32):
+                if np.sum(voxel[0, i*8:(i+1)*8, j*8:(j+1)*8, k*8:(k+1)*8].reshape(512)) > 0:
+                    voxel32[0, i, j, k] = 1
 
-        print(sym(voxel32))
-        print(SCC(voxel32))
+    print(sym(voxel32))
+    print(SCC(voxel32))
 
 
 # test()
